@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -92,10 +93,17 @@ fun MainScreen(
                     .weight(1f)
             ) {
                 items(filteredListToDisplay) { (currencyCode, rate) ->
+                    val rate = state.rates?.get(currencyCode) ?: 0.0
+                    val history = viewModel.getHistoryForCurrency(baseCurrency, currencyCode, 2)
+
+                    val previousRate = history.getOrNull(0)?.second ?: rate
+                    val changePercent = if (previousRate != 0.0) ((rate - previousRate) / previousRate) * 100 else 0.0
+
                     CurrencyItem(
                         decimalPlaces = decimalPlaces,
                         currencyCode = currencyCode,
                         rate = rate,
+                        changePercent = changePercent,
                         fullName = currencyNames[currencyCode] ?: "Unknown",
                         modifier = Modifier.clickable {
                             navController.navigate("details/$currencyCode")
@@ -138,6 +146,7 @@ fun CurrencyItem(
     decimalPlaces: Int,
     currencyCode: String,
     rate: Double,
+    changePercent: Double,
     fullName: String,
     modifier: Modifier = Modifier
 ) {
@@ -149,6 +158,18 @@ fun CurrencyItem(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
+        val color = when {
+            changePercent > 0 -> Color(0xFF4CAF50)
+            changePercent < 0 -> Color(0xFFF44336)
+            else -> Color.Gray
+        }
+
+        val icon = when {
+            changePercent > 0 -> "▲"
+            changePercent < 0 -> "▼"
+            else -> "●"
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -179,11 +200,30 @@ fun CurrencyItem(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Text(
-                text = String.format("%.${decimalPlaces}f", rate),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = String.format("%.${decimalPlaces}f", rate),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = icon,
+                        color = color,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                    Text(
+                        text = String.format("%+.2f%%", changePercent),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = color,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }

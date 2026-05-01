@@ -186,7 +186,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     var expanded by remember { mutableStateOf(false) }
-                    val currencies = listOf("PLN", "USD", "EUR", "GBP", "CHF")
+                    val currencies = listOf("PLN", "USD", "EUR", "GBP", "CHF", "JPY", "AUD", "CAD", "CNY", "HKD", "NZD", "SEK", "KRW", "SGD", "NOK")
 
                     Box {
                         OutlinedButton(
@@ -396,8 +396,8 @@ fun SettingsScreen(
                                 )
                             }
                         },
-                        valueRange = 5f..60f,
-                        steps = 10
+                        valueRange = 15f..60f,
+                        steps = 8
                     )
                 }
             }

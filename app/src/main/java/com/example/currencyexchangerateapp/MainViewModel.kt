@@ -15,6 +15,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 enum class RefreshSource {
     NETWORK_CARD,
@@ -120,6 +123,7 @@ class MainViewModel(val settingsManager: SettingsManager) : ViewModel() {
 
                         settingsManager.saveCachedRates(currency, jsonToSave)
                         settingsManager.saveLastUpdateTime(currency, currentTime)
+                        settingsManager.saveToHistory(currency, response.conversionRates)
 
                         _state.value = _state.value.copy(
                             isNetworkLoading = false,
@@ -161,36 +165,70 @@ class MainViewModel(val settingsManager: SettingsManager) : ViewModel() {
         }
     }
 
-    fun getHistoryForCurrency(currency: String, days: Int): List<Double> {
+    fun getHistoryForCurrency(baseCurrency: String, targetCurrency: String, days: Int): List<Pair<String, Double>> {
         val file = File(settingsManager.context.filesDir, "currency_history.txt")
+
         if (!file.exists()) {
             return emptyList()
         }
 
-        val history = mutableListOf<Double>()
-        val lines = file.readLines().takeLast(100)
+        val allHistory = mutableListOf<Triple<String, String, Double>>()
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
 
-        for (line in lines) {
-            val parts = line.split(" | ")
+        try {
+            file.readLines().forEach { line ->
+                if (line.isBlank()) return@forEach
 
-            if (parts.size < 3) {
-                continue
-            }
+                val parts = line.split(" | ")
+                if (parts.size >= 3 && parts[1].trim() == baseCurrency) {
+                    val dateTimeFull = parts[0].trim()
+                    val date: String
+                    val time: String
 
-            val ratesString = parts[2]
-            if (ratesString.contains("$currency=")) {
-                val rate = ratesString
-                    .substringAfter("$currency=")
-                    .substringBefore(",")
-                    .substringBefore("}")
-                    .toDoubleOrNull()
+                    if (dateTimeFull.contains(" ")) {
+                        val dt = dateTimeFull.split(" ")
+                        date = dt[0]
+                        time = dt[1]
+                    } else {
+                        date = dateTimeFull
+                        time = "00:00"
+                    }
 
-                if (rate != null) {
-                    history.add(rate)
+                    val ratesString = parts[2]
+                    val rate = ratesString.substringAfter("$targetCurrency=")
+                        .substringBefore(",")
+                        .substringBefore("}")
+                        .toDoubleOrNull()
+
+                    if (rate != null) {
+                        allHistory.add(Triple(date, time, rate))
+                    }
                 }
             }
+
+            if (allHistory.isEmpty()) return emptyList()
+
+            return if (days == 1) {
+                val filtered = allHistory.filter { it.first == today }
+                filtered.map { it.second to it.third }
+            } else {
+                allHistory.groupBy { it.first }
+                    .mapNotNull { entry ->
+                        val firstElement = entry.value.firstOrNull() ?: return@mapNotNull null
+                        entry.key to firstElement.third
+                    }
+                    .sortedBy { it.first }
+                    .takeLast(days)
+                    .map { (date, rate) ->
+                        val dateParts = date.split("-")
+                        val formattedDate = if (dateParts.size >= 3) "${dateParts[2]}.${dateParts[1]}" else date
+                        formattedDate to rate
+                    }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CURRENCY_APP", "Error parsing history", e)
+            return emptyList()
         }
-        return history.takeLast(days)
     }
 }
 

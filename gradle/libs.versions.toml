@@ -3,6 +3,8 @@ agp = "9.1.1"
 coilCompose = "2.7.0"
 compose = "3.1.0"
 composeM3 = "3.1.0"
+composeM3Version = "1.13.1"
+composeVersion = "1.13.1"
 converterGson = "3.0.0"
 coreKtx = "1.18.0"
 datastorePreferences = "1.2.1"
@@ -22,6 +24,10 @@ securityCryptoVersion = "1.1.0-alpha06"
 workRuntimeKtx = "2.11.2"
 firebaseCrashlyticsBuildtools = "3.0.7"
 foundationLayout = "1.11.0"
+ycharts = "2.1.0"
+uiText = "1.11.0"
+uiGraphics = "1.11.0"
+ui = "1.11.0"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
@@ -33,7 +39,10 @@ androidx-security-crypto-v110alpha06 = { module = "androidx.security:security-cr
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 compose = { module = "com.patrykandpatrick.vico:compose", version.ref = "compose" }
+vico-core = { module = "com.patrykandpatrick.vico:core", version.ref = "compose" }
 compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "composeM3" }
+compose-m3-v1131 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "composeM3Version" }
+compose-v1131 = { module = "com.patrykandpatrick.vico:compose", version.ref = "composeVersion" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -53,6 +62,10 @@ lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
+ycharts = { module = "co.yml:ycharts", version.ref = "ycharts" }
+androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

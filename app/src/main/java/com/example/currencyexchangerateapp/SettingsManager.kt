@@ -13,6 +13,10 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -41,8 +45,18 @@ class SettingsManager(val context: Context) {
         val IS_AUTO_REFRESH_ENABLED = booleanPreferencesKey("is_auto_refresh")
         val REFRESH_INTERVAL = floatPreferencesKey("refresh_interval")
         val DECIMAL_PLACES = intPreferencesKey("decimal_places")
+
+        val FAVOURITE_CURRENCIES = stringPreferencesKey("favourite_currencies")
     }
 
+    suspend fun saveFavourites(currencies: Set<String>) {
+        context.dataStore.edit { it[FAVOURITE_CURRENCIES] = currencies.joinToString(",") }
+    }
+
+    fun getFavourites(): Flow<Set<String>> = context.dataStore.data.map {
+        val prefs = it[FAVOURITE_CURRENCIES] ?: "PLN,USD,EUR,GBP,CHF"
+        prefs.split(",").filter { s -> s.isNotEmpty() }.toSet()
+    }
 
     suspend fun saveBaseCurrency(currency: String) {
         context.dataStore.edit { preferences ->
@@ -96,4 +110,22 @@ class SettingsManager(val context: Context) {
 
     fun getCachedRates(currency: String): String =
         securePrefs.getString("cached_rates_$currency", "") ?: ""
+
+    fun saveToHistory(base: String, rates: Map<String, Double>) {
+        val dateFull = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+        val file = File(context.filesDir, "currency_history.txt")
+        val lines = if (file.exists()) file.readLines().toMutableList() else mutableListOf()
+
+        val existingIndex = lines.indexOfFirst { it.startsWith("$dateFull | $base") }
+        val newEntry = "$dateFull | $base | $rates"
+
+        if (existingIndex != -1) {
+            lines[existingIndex] = newEntry
+        } else {
+            lines.add(newEntry)
+        }
+        file.writeText(lines.joinToString("\n") + "\n")
+    }
+
+
 }

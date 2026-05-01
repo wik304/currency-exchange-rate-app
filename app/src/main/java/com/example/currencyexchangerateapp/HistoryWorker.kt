@@ -3,10 +3,6 @@ package com.example.currencyexchangerateapp
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class HistoryWorker(
     appContext: Context,
@@ -40,7 +36,7 @@ class HistoryWorker(
                         it in targetCurrencies && it != baseCurrency
                     }
 
-                    saveToHistory(baseCurrency, filteredRates)
+                    settingsManager.saveToHistory(baseCurrency, filteredRates)
                 } else {
                     allSuccessful = false
                 }
@@ -54,12 +50,5 @@ class HistoryWorker(
         } else {
             Result.retry()
         }
-    }
-
-    private fun saveToHistory(base: String, rates: Map<String, Double>) {
-        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val entry = "$date | $base | $rates\n"
-        val file = File(applicationContext.filesDir, "currency_history.txt")
-        file.appendText(entry)
     }
 }

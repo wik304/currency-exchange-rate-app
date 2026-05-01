@@ -27,16 +27,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis.Companion.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModel
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.LineCartesianLayerModel
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -48,12 +53,12 @@ fun DetailsScreen(
     settingsManager: SettingsManager
 ) {
     val state by viewModel.state.collectAsState()
-    var selectedDays by remember { mutableIntStateOf(7) }
-    val history = viewModel.getHistoryForCurrency(currencyCode, selectedDays)
-    val baseCurrency = state.rates?.keys?.firstOrNull() ?: "PLN"
+    var selectedDays by remember { mutableIntStateOf(1) }
+    val baseCurrency by settingsManager.getBaseCurrency().collectAsState("PLN")
+    val history = viewModel.getHistoryForCurrency(baseCurrency, currencyCode, selectedDays)
 
     val currentRate = state.rates?.get(currencyCode) ?: 0.0
-    val previousRate = history.getOrNull(0) ?: currentRate
+    val previousRate = history.getOrNull(0)?.second ?: currentRate
     val change = currentRate - previousRate
     val changePercent = if (previousRate != 0.0) (change / previousRate) * 100 else 0.0
 
@@ -170,11 +175,11 @@ fun DetailsScreen(
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.Start
             ) {
-                listOf(7, 14, 30).forEach { days ->
+                listOf(1, 7, 30).forEach { days ->
                     FilterChip(
                         selected = selectedDays == days,
                         onClick = { selectedDays = days },
-                        label = { Text("$days days") })
+                        label = { Text(if (days == 1) "1 day" else "$days days") })
                 }
             }
         }
@@ -188,7 +193,7 @@ fun DetailsScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp).padding(vertical = 8.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 8.dp).padding(vertical = 8.dp)) {
                 if (history.size >= 2) {
                     LineChart(
                         data = history,
@@ -202,7 +207,11 @@ fun DetailsScreen(
                             .fillMaxWidth()
                             .height(200.dp), contentAlignment = Alignment.Center
                     ) {
-                        Text("There is no historical data for this currency.\n.")
+                        Text(
+                            text = "There is no historical data for this currency.",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.width(200.dp)
+                        )
                     }
                 }
             }
@@ -231,7 +240,7 @@ fun DetailsScreen(
                     )
                 }
 
-                val lastUpdate = settingsManager.getLastUpdateTime(currencyCode)
+                val lastUpdate = settingsManager.getLastUpdateTime(baseCurrency)
                 val date = if (lastUpdate > 0) {
                     SimpleDateFormat("dd.MM.yyyy HH:mm", LocalLocale.current.platformLocale).format(
                         Date(
@@ -262,20 +271,53 @@ fun DetailsScreen(
 
 @Composable
 fun LineChart(
-    data: List<Double>, modifier: Modifier = Modifier
+    data: List<Pair<String, Double>>,
+    modifier: Modifier = Modifier
 ) {
+    val values = data.map { it.second.toFloat() }
+    val minY = values.minOrNull() ?: 0f
+    val maxY = values.maxOrNull() ?: 1f
+    val padding = (maxY - minY) * 0.1f
+
     val model = remember(data) {
         CartesianChartModel(
             LineCartesianLayerModel.build {
-                series(data.map { it.toFloat() })
-            })
+                series(data.map { it.second.toFloat() })
+            }
+        )
+    }
+
+    val bottomAxisValueFormatter = CartesianValueFormatter { _, x, _ ->
+        val index = x.toInt()
+        data.getOrNull(index)?.first ?: ""
     }
 
     CartesianChartHost(
         chart = rememberCartesianChart(
-            layers = arrayOf(rememberLineCartesianLayer()),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom()
-        ), model = model, modifier = modifier
+            layers = arrayOf(
+                rememberLineCartesianLayer(
+                    rangeProvider = CartesianLayerRangeProvider.fixed(
+                        minY = (minY - padding).toDouble(),
+                        maxY = (maxY + padding).toDouble()
+                    )
+                )
+            ),
+            startAxis = rememberStart(
+                itemPlacer = VerticalAxis.ItemPlacer.step(
+                    step = { ((maxY - minY + 2 * padding) / 4.0) }
+                ),
+                horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Outside,
+                valueFormatter = CartesianValueFormatter { _, value, _ ->
+                    String.format("%.4f", value)
+                },
+            ),
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = bottomAxisValueFormatter
+            ),
+            marker = null
+        ),
+        model = model,
+        modifier = modifier,
+        zoomState = rememberVicoZoomState(zoomEnabled = false)
     )
 }

@@ -3,8 +3,10 @@ package com.example.currencyexchangerateapp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Badge
@@ -64,6 +66,14 @@ fun Navigation(
 //            unselectedIcon = Icons.Outlined.Analytics,
 //            hasNews = false
 //        ),
+
+        BottomNavigationItem(
+            route = Screen.FavouriteScreen.route,
+            title = "Favourite",
+            selectedIcon = Icons.Filled.Favorite,
+            unselectedIcon = Icons.Outlined.FavoriteBorder,
+            hasNews = false
+        ),
 
         BottomNavigationItem(
             route = Screen.SettingsScreen.route,
@@ -147,6 +157,13 @@ fun Navigation(
                     val currencyCode = backStackEntry.arguments?.getString("currencyCode") ?: "USD"
                     DetailsScreen(
                         currencyCode = currencyCode,
+                        navController = navController,
+                        viewModel = mainViewModel,
+                        settingsManager = settingsManager
+                    )
+                }
+                composable(route = Screen.FavouriteScreen.route) {
+                    FavouriteScreen(
                         navController = navController,
                         viewModel = mainViewModel,
                         settingsManager = settingsManager
