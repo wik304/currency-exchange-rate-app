@@ -1,4 +1,4 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +31,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.currencyexchangerateapp.viewmodel.MainViewModel
+import com.example.currencyexchangerateapp.data.CurrencyData
+import com.example.currencyexchangerateapp.data.SettingsManager
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
@@ -62,31 +65,17 @@ fun DetailsScreen(
     val change = currentRate - previousRate
     val changePercent = if (previousRate != 0.0) (change / previousRate) * 100 else 0.0
 
-    val currencyNames = mapOf(
-        "PLN" to "Polish Zloty",
-        "USD" to "United States Dollar",
-        "EUR" to "Euro",
-        "GBP" to "British Pound",
-        "CHF" to "Swiss Franc",
-        "JPY" to "Japanese Yen",
-        "AUD" to "Australian Dollar",
-        "CAD" to "Canadian Dollar",
-        "CNY" to "Chinese Yuan",
-        "HKD" to "Hong Kong Dollar",
-        "NZD" to "New Zealand Dollar",
-        "SEK" to "Swedish Krona",
-        "KRW" to "South Korean Won",
-        "SGD" to "Singapore Dollar",
-        "NOK" to "Norwegian Krone"
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.Start
+            .padding(16.dp),
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "Details",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
         Card(
             modifier = Modifier
@@ -106,7 +95,7 @@ fun DetailsScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     AsyncImage(
-                        model = getFlagUrl(baseCurrency),
+                        model = CurrencyData.getFlagUrl(baseCurrency),
                         contentDescription = null,
                         modifier = Modifier.size(40.dp)
                     )
@@ -121,7 +110,7 @@ fun DetailsScreen(
                         )
 
                         Text(
-                            text = currencyNames[baseCurrency] ?: "",
+                            text = CurrencyData.getCurrencyName(baseCurrency),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -141,7 +130,7 @@ fun DetailsScreen(
                         )
 
                         Text(
-                            text = currencyNames[currencyCode] ?: "",
+                            text = CurrencyData.getCurrencyName(currencyCode),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -150,7 +139,7 @@ fun DetailsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
 
                     AsyncImage(
-                        model = getFlagUrl(currencyCode),
+                        model = CurrencyData.getFlagUrl(currencyCode),
                         contentDescription = null,
                         modifier = Modifier.size(40.dp)
                     )
@@ -193,7 +182,9 @@ fun DetailsScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            Column(modifier = Modifier.padding(horizontal = 8.dp).padding(vertical = 8.dp)) {
+            Column(modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .padding(vertical = 8.dp)) {
                 if (history.size >= 2) {
                     LineChart(
                         data = history,
@@ -233,11 +224,33 @@ fun DetailsScreen(
                         style = MaterialTheme.typography.headlineSmall
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = String.format("%+.2f%%", changePercent),
-                        color = if (change >= 0) Color(0xFF4CAF50) else Color.Red,
-                        style = MaterialTheme.typography.titleSmall
-                    )
+
+                    val color = when {
+                        changePercent > 0 -> Color(0xFF4CAF50)
+                        changePercent < 0 -> Color(0xFFF44336)
+                        else -> Color.Gray
+                    }
+
+                    val icon = when {
+                        changePercent > 0 -> "▲"
+                        changePercent < 0 -> "▼"
+                        else -> "●"
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = icon,
+                            color = color,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Text(
+                            text = String.format("%+.2f%%", changePercent),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = color,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
 
                 val lastUpdate = settingsManager.getLastUpdateTime(baseCurrency)
@@ -275,9 +288,21 @@ fun LineChart(
     modifier: Modifier = Modifier
 ) {
     val values = data.map { it.second.toFloat() }
+
     val minY = values.minOrNull() ?: 0f
     val maxY = values.maxOrNull() ?: 1f
-    val padding = (maxY - minY) * 0.1f
+
+    val (finalMin, finalMax) = if (minY == maxY) {
+        val delta = if (minY == 0f) 1f else minY * 0.1f
+        (minY - delta) to (maxY + delta)
+    } else {
+        val range = maxY - minY
+        val padding = range * 0.2f
+        (minY - padding) to (maxY + padding)
+    }
+
+    val safeRange = (finalMax - finalMin).takeIf { it > 0f } ?: 1f
+    val step = (safeRange / 4f).toDouble()
 
     val model = remember(data) {
         CartesianChartModel(
@@ -297,14 +322,14 @@ fun LineChart(
             layers = arrayOf(
                 rememberLineCartesianLayer(
                     rangeProvider = CartesianLayerRangeProvider.fixed(
-                        minY = (minY - padding).toDouble(),
-                        maxY = (maxY + padding).toDouble()
+                        minY = finalMin.toDouble(),
+                        maxY = finalMax.toDouble()
                     )
                 )
             ),
             startAxis = rememberStart(
                 itemPlacer = VerticalAxis.ItemPlacer.step(
-                    step = { ((maxY - minY + 2 * padding) / 4.0) }
+                    step = { step }
                 ),
                 horizontalLabelPosition = VerticalAxis.HorizontalLabelPosition.Outside,
                 valueFormatter = CartesianValueFormatter { _, value, _ ->

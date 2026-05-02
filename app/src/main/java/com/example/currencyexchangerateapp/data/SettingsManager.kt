@@ -1,4 +1,4 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore

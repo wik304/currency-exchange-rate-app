@@ -1,4 +1,4 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.ui.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,16 +21,26 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.currencyexchangerateapp.viewmodel.MainViewModel
+import com.example.currencyexchangerateapp.viewmodel.MainViewModelFactory
+import com.example.currencyexchangerateapp.utils.NetworkMonitor
+import com.example.currencyexchangerateapp.data.SettingsManager
+import com.example.currencyexchangerateapp.ui.screens.DetailsScreen
+import com.example.currencyexchangerateapp.ui.screens.FavouriteScreen
+import com.example.currencyexchangerateapp.ui.screens.MainScreen
+import com.example.currencyexchangerateapp.ui.screens.SettingsScreen
 
 data class BottomNavigationItem(
     val route: String,
@@ -45,7 +55,10 @@ data class BottomNavigationItem(
 fun Navigation(
     settingsManager: SettingsManager
 ) {
-    val factory = MainViewModelFactory(settingsManager)
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor(context) }
+
+    val factory = MainViewModelFactory(settingsManager, networkMonitor)
     val mainViewModel: MainViewModel = viewModel(factory = factory)
 
     val navController = rememberNavController()

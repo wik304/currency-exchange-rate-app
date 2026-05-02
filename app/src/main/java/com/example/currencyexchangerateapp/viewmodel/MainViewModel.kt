@@ -1,8 +1,11 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.currencyexchangerateapp.data.SettingsManager
+import com.example.currencyexchangerateapp.utils.NetworkMonitor
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
@@ -60,11 +63,23 @@ object RetrofitInstance {
     }
 }
 
-class MainViewModel(val settingsManager: SettingsManager) : ViewModel() {
+class MainViewModel(
+    val settingsManager: SettingsManager,
+    val networkMonitor: NetworkMonitor
+) : ViewModel() {
     private val _state = MutableStateFlow(MainScreenState())
     val state: StateFlow<MainScreenState> = _state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            networkMonitor.isConnected.collect { connected ->
+                _state.value = _state.value.copy(isOfflineMode = !connected)
+                if (connected) {
+                    getRatesForCurrency(settingsManager.getApiKey(), isAutomatic = true)
+                }
+            }
+        }
+
         viewModelScope.launch {
             settingsManager.getBaseCurrency().collect { newCurrency ->
                 getRatesForCurrency(
@@ -165,7 +180,11 @@ class MainViewModel(val settingsManager: SettingsManager) : ViewModel() {
         }
     }
 
-    fun getHistoryForCurrency(baseCurrency: String, targetCurrency: String, days: Int): List<Pair<String, Double>> {
+    fun getHistoryForCurrency(
+        baseCurrency: String,
+        targetCurrency: String,
+        days: Int
+    ): List<Pair<String, Double>> {
         val file = File(settingsManager.context.filesDir, "currency_history.txt")
 
         if (!file.exists()) {
@@ -221,24 +240,26 @@ class MainViewModel(val settingsManager: SettingsManager) : ViewModel() {
                     .takeLast(days)
                     .map { (date, rate) ->
                         val dateParts = date.split("-")
-                        val formattedDate = if (dateParts.size >= 3) "${dateParts[2]}.${dateParts[1]}" else date
+                        val formattedDate =
+                            if (dateParts.size >= 3) "${dateParts[2]}.${dateParts[1]}" else date
                         formattedDate to rate
                     }
             }
         } catch (e: Exception) {
-            android.util.Log.e("CURRENCY_APP", "Error parsing history", e)
+            Log.e("CURRENCY_APP", "Error parsing history", e)
             return emptyList()
         }
     }
 }
 
 class MainViewModelFactory(
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(settingsManager) as T
+            return MainViewModel(settingsManager, networkMonitor) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

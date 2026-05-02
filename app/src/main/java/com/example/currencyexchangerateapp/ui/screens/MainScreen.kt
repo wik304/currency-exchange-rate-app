@@ -1,17 +1,15 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -19,13 +17,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.currencyexchangerateapp.viewmodel.MainViewModel
+import com.example.currencyexchangerateapp.utils.NetworkMonitor
+import com.example.currencyexchangerateapp.data.CurrencyData
+import com.example.currencyexchangerateapp.data.SettingsManager
 
 @Composable
 fun MainScreen(
@@ -34,57 +38,58 @@ fun MainScreen(
     settingsManager: SettingsManager
 ) {
     val state by viewModel.state.collectAsState()
-
     val baseCurrency by settingsManager.getBaseCurrency().collectAsState("PLN")
     val decimalPlaces by settingsManager.getDecimalPlaces().collectAsState(4)
 
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor(context) }
+    val isOnline by networkMonitor.isConnected.collectAsState(initial = true)
+
     Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Watched Currencies",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-        if (state.isOfflineMode) {
+        if (!isOnline) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
             ) {
-                Text(
-                    text = "Offline Mode - Displaying cached data",
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                Row(
                     modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "No internet connection - displaying cached data",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
-        if (state.rates != null) {
-            val currencyNames = mapOf(
-                "PLN" to "Polish Zloty",
-                "USD" to "United States Dollar",
-                "EUR" to "Euro",
-                "GBP" to "British Pound",
-                "CHF" to "Swiss Franc",
-                "JPY" to "Japanese Yen",
-                "AUD" to "Australian Dollar",
-                "CAD" to "Canadian Dollar",
-                "CNY" to "Chinese Yuan",
-                "HKD" to "Hong Kong Dollar",
-                "NZD" to "New Zealand Dollar",
-                "SEK" to "Swedish Krona",
-                "KRW" to "South Korean Won",
-                "SGD" to "Singapore Dollar",
-                "NOK" to "Norwegian Krone",
-            )
+        val favouriteCurrencies by settingsManager.getFavourites()
+            .collectAsState(initial = emptySet())
 
+        if (state.rates != null) {
             val filteredListToDisplay = state.rates!!
-                .filterKeys { it in currencyNames.keys && it != baseCurrency }
+                .filterKeys {
+                    it in CurrencyData.getAllCodes() &&
+                            it != baseCurrency &&
+                            it in favouriteCurrencies
+                }
                 .toList()
 
             LazyColumn(
@@ -92,23 +97,27 @@ fun MainScreen(
                     .fillMaxWidth()
                     .weight(1f)
             ) {
-                items(filteredListToDisplay) { (currencyCode, rate) ->
-                    val rate = state.rates?.get(currencyCode) ?: 0.0
+                itemsIndexed(filteredListToDisplay) { index, (currencyCode, rate) ->
                     val history = viewModel.getHistoryForCurrency(baseCurrency, currencyCode, 2)
 
                     val previousRate = history.getOrNull(0)?.second ?: rate
-                    val changePercent = if (previousRate != 0.0) ((rate - previousRate) / previousRate) * 100 else 0.0
+                    val changePercent =
+                        if (previousRate != 0.0) ((rate - previousRate) / previousRate) * 100 else 0.0
 
                     CurrencyItem(
                         decimalPlaces = decimalPlaces,
                         currencyCode = currencyCode,
                         rate = rate,
                         changePercent = changePercent,
-                        fullName = currencyNames[currencyCode] ?: "Unknown",
+                        fullName = CurrencyData.getCurrencyName(currencyCode),
                         modifier = Modifier.clickable {
                             navController.navigate("details/$currencyCode")
                         }
                     )
+
+                    if (index < filteredListToDisplay.lastIndex) {
+                        Spacer(modifier = Modifier.padding(vertical = 4.dp))
+                    }
                 }
             }
         } else {
@@ -117,28 +126,6 @@ fun MainScreen(
             )
         }
     }
-}
-
-fun getFlagUrl(currencyCode: String): String {
-    val countryCode = when (currencyCode) {
-        "USD" -> "us"
-        "EUR" -> "eu"
-        "GBP" -> "gb"
-        "CHF" -> "ch"
-        "PLN" -> "pl"
-        "JPY" -> "jp"
-        "AUD" -> "au"
-        "CAD" -> "ca"
-        "CNY" -> "cn"
-        "HKD" -> "hk"
-        "NZD" -> "nz"
-        "SEK" -> "se"
-        "KRW" -> "kr"
-        "SGD" -> "sg"
-        "NOK" -> "no"
-        else -> "unknown"
-    }
-    return "https://flagcdn.com/w40/$countryCode.png"
 }
 
 @Composable
@@ -152,8 +139,7 @@ fun CurrencyItem(
 ) {
     Card(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
@@ -177,7 +163,7 @@ fun CurrencyItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = getFlagUrl(currencyCode),
+                model = CurrencyData.getFlagUrl(currencyCode),
                 contentDescription = "Flag $fullName",
                 modifier = Modifier
                     .size(40.dp)

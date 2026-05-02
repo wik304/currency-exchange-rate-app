@@ -1,4 +1,4 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,9 +43,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.currencyexchangerateapp.viewmodel.MainViewModel
+import com.example.currencyexchangerateapp.utils.NetworkMonitor
+import com.example.currencyexchangerateapp.viewmodel.RefreshSource
+import com.example.currencyexchangerateapp.data.CurrencyData
+import com.example.currencyexchangerateapp.data.SettingsManager
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -67,7 +73,9 @@ fun SettingsScreen(
     var refreshInterval by remember(savedInterval) { mutableFloatStateOf(savedInterval) }
     var decimalPlaces by remember(savedDecimalPlaces) { mutableIntStateOf(savedDecimalPlaces) }
 
-    val isNetworkConnected = state.errorMessage == null
+    val context = LocalContext.current
+    val networkMonitor = remember { NetworkMonitor(context) }
+    val isNetworkConnected by networkMonitor.isConnected.collectAsState(initial = false)
 
     Column(
         modifier = Modifier
@@ -186,7 +194,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     var expanded by remember { mutableStateOf(false) }
-                    val currencies = listOf("PLN", "USD", "EUR", "GBP", "CHF", "JPY", "AUD", "CAD", "CNY", "HKD", "NZD", "SEK", "KRW", "SGD", "NOK")
+                    val currencies = CurrencyData.currencies
 
                     Box {
                         OutlinedButton(
@@ -209,12 +217,12 @@ fun SettingsScreen(
                         ) {
                             currencies.forEach { currency ->
                                 DropdownMenuItem(
-                                    text = { Text(currency) },
+                                    text = { Text(currency.code) },
                                     onClick = {
-                                        baseCurrency = currency
+                                        baseCurrency = currency.code
                                         expanded = false
                                         scope.launch {
-                                            settingsManager.saveBaseCurrency(currency)
+                                            settingsManager.saveBaseCurrency(currency.code)
                                         }
                                     }
                                 )

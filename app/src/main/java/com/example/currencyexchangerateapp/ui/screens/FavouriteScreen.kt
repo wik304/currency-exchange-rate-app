@@ -1,4 +1,4 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +26,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.currencyexchangerateapp.viewmodel.MainViewModel
+import com.example.currencyexchangerateapp.data.CurrencyData
+import com.example.currencyexchangerateapp.data.SettingsManager
 import kotlinx.coroutines.launch
 
 @Composable
@@ -37,19 +40,13 @@ fun FavouriteScreen(
     val scope = rememberCoroutineScope()
     val favouriteCurrencies by settingsManager.getFavourites().collectAsState(initial = emptySet())
 
-    val allCurrencies = listOf(
-        "PLN", "USD", "EUR", "GBP", "CHF", "JPY", "AUD", "CAD", "CNY", "HKD", "NZD", "SEK", "KRW", "SGD", "NOK"
-    )
+    val baseCurrency by settingsManager.getBaseCurrency().collectAsState("PLN")
+    val filteredCurrencies = CurrencyData.currencies.filter { it.code != baseCurrency }
 
-    val currencyNames = mapOf(
-        "PLN" to "Polish Zloty", "USD" to "United States Dollar", "EUR" to "Euro",
-        "GBP" to "British Pound", "CHF" to "Swiss Franc", "JPY" to "Japanese Yen",
-        "AUD" to "Australian Dollar", "CAD" to "Canadian Dollar", "CNY" to "Chinese Yuan",
-        "HKD" to "Hong Kong Dollar", "NZD" to "New Zealand Dollar", "SEK" to "Swedish Krona",
-        "KRW" to "South Korean Won", "SGD" to "Singapore Dollar", "NOK" to "Norwegian Krone"
-    )
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text(
             text = "Manage Currencies",
             style = MaterialTheme.typography.headlineMedium,
@@ -58,30 +55,36 @@ fun FavouriteScreen(
         )
 
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(allCurrencies) { currencyCode ->
-                val isFavourite = favouriteCurrencies.contains(currencyCode)
+            itemsIndexed(filteredCurrencies) { index, currency ->
+                val isFavourite = favouriteCurrencies.contains(currency.code)
 
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(
-                                model = getFlagUrl(currencyCode),
+                                model = CurrencyData.getFlagUrl(currency.code),
                                 contentDescription = null,
                                 modifier = Modifier.size(32.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text(text = currencyCode, fontWeight = FontWeight.Bold)
-                                Text(text = currencyNames[currencyCode] ?: "", style = MaterialTheme.typography.bodySmall)
+                                Text(text = currency.code, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = currency.name,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
                         }
 
@@ -90,13 +93,17 @@ fun FavouriteScreen(
                             onCheckedChange = { checked ->
                                 scope.launch {
                                     val newFavourites = favouriteCurrencies.toMutableSet()
-                                    if (checked) newFavourites.add(currencyCode)
-                                    else newFavourites.remove(currencyCode)
+                                    if (checked) newFavourites.add(currency.code)
+                                    else newFavourites.remove(currency.code)
                                     settingsManager.saveFavourites(newFavourites)
                                 }
                             }
                         )
                     }
+                }
+
+                if (index < filteredCurrencies.lastIndex) {
+                    Spacer(modifier = Modifier.padding(vertical = 4.dp))
                 }
             }
         }

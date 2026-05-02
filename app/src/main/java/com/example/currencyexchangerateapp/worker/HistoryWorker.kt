@@ -1,8 +1,10 @@
-package com.example.currencyexchangerateapp
+package com.example.currencyexchangerateapp.worker
 
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.currencyexchangerateapp.data.SettingsManager
+import com.example.currencyexchangerateapp.viewmodel.RetrofitInstance
 
 class HistoryWorker(
     appContext: Context,

@@ -10,7 +10,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.currencyexchangerateapp.data.SettingsManager
+import com.example.currencyexchangerateapp.ui.navigation.Navigation
 import com.example.currencyexchangerateapp.ui.theme.CurrencyExchangeRateAppTheme
+import com.example.currencyexchangerateapp.worker.HistoryWorker
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
