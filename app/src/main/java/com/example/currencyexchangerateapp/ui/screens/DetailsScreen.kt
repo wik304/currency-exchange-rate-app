@@ -1,16 +1,21 @@
 package com.example.currencyexchangerateapp.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -25,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -65,220 +71,224 @@ fun DetailsScreen(
     val change = currentRate - previousRate
     val changePercent = if (previousRate != 0.0) (change / previousRate) * 100 else 0.0
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val scrollState = rememberScrollState()
+
+    val screenWidthDp = configuration.screenWidthDp
+    val isTablet = screenWidthDp >= 600
+
+    val chartHeight = when {
+        isTablet && isLandscape -> 350.dp
+        isTablet -> 450.dp
+        isLandscape -> 180.dp
+        else -> 250.dp
+    }
+
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(scrollState),
     ) {
-        Text(
-            text = "Details",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+        if (!isLandscape) {
+            Text(
+                text = "Details",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+
+            if (isTablet) {
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AsyncImage(
-                        model = CurrencyData.getFlagUrl(baseCurrency),
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = baseCurrency,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = CurrencyData.getCurrencyName(baseCurrency),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        CurrencyInfoCard(baseCurrency, currencyCode)
+                    }
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        ChartFilterCard(selectedDays) { selectedDays = it }
                     }
                 }
+            } else {
+                CurrencyInfoCard(baseCurrency, currencyCode)
+                Spacer(modifier = Modifier.height(8.dp))
+                ChartFilterCard(selectedDays) { selectedDays = it }
+            }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ChartContentCard(history, chartHeight)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isTablet) {
                 Row(
-                    modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Max),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                    ) {
-                        Text(
-                            text = currencyCode,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        CurrentRateCard(currentRate, changePercent, baseCurrency, settingsManager)
 
-                        Text(
-                            text = CurrencyData.getCurrencyName(currencyCode),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
                     }
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        DataSourceCard()
+                    }
+                }
+            } else {
+                CurrentRateCard(currentRate, changePercent, baseCurrency, settingsManager)
+                Spacer(modifier = Modifier.height(8.dp))
+                DataSourceCard()
+            }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    ChartFilterCard(selectedDays) { selectedDays = it }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ChartContentCard(history, chartHeight)
+                }
 
-                    AsyncImage(
-                        model = CurrencyData.getFlagUrl(currencyCode),
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp)
-                    )
+                Column(modifier = Modifier.weight(1f)) {
+                    CurrencyInfoCard(baseCurrency, currencyCode)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    CurrentRateCard(currentRate, changePercent, baseCurrency, settingsManager)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DataSourceCard()
                 }
             }
+            Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+@Composable
+fun CurrencyInfoCard(baseCurrency: String, currencyCode: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().fillMaxSize(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            Row(modifier = Modifier.weight(1f)) {
+                AsyncImage(model = CurrencyData.getFlagUrl(baseCurrency), contentDescription = null, modifier = Modifier.size(40.dp))
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(baseCurrency, fontWeight = FontWeight.Bold)
+                    Text(CurrencyData.getCurrencyName(baseCurrency), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(currencyCode, fontWeight = FontWeight.Bold)
+                    Text(CurrencyData.getCurrencyName(currencyCode), style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                AsyncImage(model = CurrencyData.getFlagUrl(currencyCode), contentDescription = null, modifier = Modifier.size(40.dp))
+            }
+        }
+    }
+}
 
+@Composable
+fun ChartFilterCard(selectedDays: Int, onDaysSelected: (Int) -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().fillMaxSize(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.Start
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(1, 7, 30).forEach { days ->
                     FilterChip(
                         selected = selectedDays == days,
-                        onClick = { selectedDays = days },
-                        label = { Text(if (days == 1) "1 day" else "$days days") })
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(modifier = Modifier
-                .padding(horizontal = 8.dp)
-                .padding(vertical = 8.dp)) {
-                if (history.size >= 2) {
-                    LineChart(
-                        data = history,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(250.dp)
+                        onClick = { onDaysSelected(days) },
+                        label = { Text(if (days == 1) "1 day" else "$days days") }
                     )
-                } else {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(200.dp), contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "There is no historical data for this currency.",
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.width(200.dp)
-                        )
-                    }
                 }
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+@Composable
+fun ChartContentCard(history: List<Pair<String, Double>>, chartHeight: androidx.compose.ui.unit.Dp) {
+    Card(
+        modifier = Modifier.fillMaxWidth().fillMaxSize(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            if (history.size >= 2) {
+                LineChart(data = history, modifier = Modifier.fillMaxWidth().height(chartHeight))
+            } else {
+                Box(Modifier.fillMaxWidth().height(chartHeight), contentAlignment = Alignment.Center) {
+                    Text("There is no historical data for this currency.", textAlign = TextAlign.Center)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CurrentRateCard(currentRate: Double, changePercent: Double, baseCurrency: String, settingsManager: SettingsManager) {
+    Card(
+        modifier = Modifier.fillMaxWidth().fillMaxSize(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(String.format("%.4f", currentRate), style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.width(12.dp))
+                val color = if (changePercent > 0) Color(0xFF4CAF50) else if (changePercent < 0) Color(0xFFF44336) else Color.Gray
+                val icon = if (changePercent > 0) "▲" else if (changePercent < 0) "▼" else "●"
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = String.format("%.4f", currentRate),
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    val color = when {
-                        changePercent > 0 -> Color(0xFF4CAF50)
-                        changePercent < 0 -> Color(0xFFF44336)
-                        else -> Color.Gray
-                    }
-
-                    val icon = when {
-                        changePercent > 0 -> "▲"
-                        changePercent < 0 -> "▼"
-                        else -> "●"
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = icon,
-                            color = color,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                        Text(
-                            text = String.format("%+.2f%%", changePercent),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = color,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    Text(text = icon, color = color, modifier = Modifier.padding(end = 4.dp))
+                    Text(String.format("%+.2f%%", changePercent), color = color, fontWeight = FontWeight.Medium)
                 }
-
-                val lastUpdate = settingsManager.getLastUpdateTime(baseCurrency)
-                val date = if (lastUpdate > 0) {
-                    SimpleDateFormat("dd.MM.yyyy HH:mm", LocalLocale.current.platformLocale).format(
-                        Date(
-                            lastUpdate
-                        )
-                    )
-                } else "Never"
-
-                Text(text = "Updated: $date", style = MaterialTheme.typography.bodySmall)
             }
+            val lastUpdate = settingsManager.getLastUpdateTime(baseCurrency)
+            val date = if (lastUpdate > 0) SimpleDateFormat("dd.MM.yyyy HH:mm", LocalLocale.current.platformLocale).format(Date(lastUpdate)) else "Never"
+            Text(text = "Updated: $date", style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()
+@Composable
+fun DataSourceCard() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth().fillMaxSize(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Data source:", fontWeight = FontWeight.Bold)
-                Text("v6.exchangerate-api.com", style = MaterialTheme.typography.bodySmall)
-            }
+            Text("Data source:", fontWeight = FontWeight.Bold)
+            Text("v6.exchangerate-api.com", style = MaterialTheme.typography.bodySmall)
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -343,6 +353,6 @@ fun LineChart(
         ),
         model = model,
         modifier = modifier,
-        zoomState = rememberVicoZoomState(zoomEnabled = false)
+        zoomState = rememberVicoZoomState(zoomEnabled = false),
     )
 }

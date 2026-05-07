@@ -1,5 +1,6 @@
 package com.example.currencyexchangerateapp.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -77,6 +79,17 @@ fun SettingsScreen(
     val networkMonitor = remember { NetworkMonitor(context) }
     val isNetworkConnected by networkMonitor.isConnected.collectAsState(initial = false)
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val screenWidthDp = configuration.screenWidthDp
+    val columns = when {
+        isLandscape && screenWidthDp >= 600 -> 3
+        isLandscape -> 2
+        screenWidthDp >= 600 -> 2
+        else -> 1
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -86,327 +99,387 @@ fun SettingsScreen(
     ) {
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+        if (!isLandscape) {
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
+        }
+
+        if (columns >= 2) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ConnectionStatusCard(
+                        isNetworkConnected = isNetworkConnected,
+                        isNetworkLoading = state.isNetworkLoading,
+                        onRefreshClick = { viewModel.getRatesForCurrency(baseCurrency, RefreshSource.NETWORK_CARD) }
+                    )
+                    ManualRefreshCard(
+                        isLoading = state.isManualLoading,
+                        onRefreshClick = { viewModel.getRatesForCurrency(baseCurrency, RefreshSource.MANUAL_CARD) }
+                    )
+                    AutoRefreshCard(
+                        isEnabled = isAutoRefreshEnabled,
+                        refreshInterval = refreshInterval,
+                        onEnabledChange = { isChecked ->
+                            isAutoRefreshEnabled = isChecked
+                            scope.launch { settingsManager.saveAutoRefreshStatus(isChecked) }
+                        },
+                        onIntervalChange = { newValue ->
+                            refreshInterval = newValue
+                            scope.launch { settingsManager.saveRefreshInterval(newValue.roundToInt().toFloat()) }
+                        }
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    BaseCurrencyCard(
+                        baseCurrency = baseCurrency,
+                        onBaseCurrencyChange = { newCode ->
+                            baseCurrency = newCode
+                            scope.launch { settingsManager.saveBaseCurrency(newCode) }
+                        }
+                    )
+                    FormatCard(
+                        decimalPlaces = decimalPlaces,
+                        onDecimalPlacesChange = { newValue ->
+                            decimalPlaces = newValue
+                            scope.launch { settingsManager.saveDecimalPlaces(newValue) }
+                        }
+                    )
+                }
+            }
+        } else {
+            ConnectionStatusCard(isNetworkConnected, state.isNetworkLoading) {
+                viewModel.getRatesForCurrency(baseCurrency, RefreshSource.NETWORK_CARD)
+            }
+            BaseCurrencyCard(baseCurrency) {
+                baseCurrency = it
+                scope.launch { settingsManager.saveBaseCurrency(it) }
+            }
+            FormatCard(decimalPlaces) {
+                decimalPlaces = it
+                scope.launch { settingsManager.saveDecimalPlaces(it) }
+            }
+            ManualRefreshCard(state.isManualLoading) {
+                viewModel.getRatesForCurrency(baseCurrency, RefreshSource.MANUAL_CARD)
+            }
+            AutoRefreshCard(
+                isEnabled = isAutoRefreshEnabled,
+                refreshInterval = refreshInterval,
+                onEnabledChange = { isChecked ->
+                    isAutoRefreshEnabled = isChecked
+                    scope.launch { settingsManager.saveAutoRefreshStatus(isChecked) }
+                },
+                onIntervalChange = { newValue ->
+                    refreshInterval = newValue
+                    scope.launch { settingsManager.saveRefreshInterval(newValue.roundToInt().toFloat()) }
+                }
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun FormatCard(
+    decimalPlaces: Int,
+    onDecimalPlacesChange: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
         ) {
-            Column(
+            Text(
+                "Display format",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                "Number of decimal places",
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(2, 3, 4).forEach { places ->
+                    FilterChip(
+                        selected = decimalPlaces == places,
+                        onClick = { onDecimalPlacesChange(places) },
+                        label = {
+                            Text("0." + "0".repeat(places))
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BaseCurrencyCard(
+    baseCurrency: String,
+    onBaseCurrencyChange: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                "Base currency",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Connection status",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    "Exchange rates will be calculated relative to this currency.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
+                Spacer(modifier = Modifier.width(16.dp))
+
+                var expanded by remember { mutableStateOf(false) }
+                val currencies = CurrencyData.currencies
+
+                Box {
+                    OutlinedButton(
+                        onClick = { expanded = true },
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isNetworkConnected) {
-                                        Color(0xFF4CAF50)
-                                    } else {
-                                        Color.Red
-                                    }
-                                )
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            text = if (isNetworkConnected) {
-                                "Connected to the network"
-                            } else {
-                                "No connection"
-                            },
+                        Text(baseCurrency)
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = null
                         )
                     }
 
-                    IconButton(
-                        onClick = {
-                            viewModel.getRatesForCurrency(baseCurrency, RefreshSource.NETWORK_CARD)
-                        },
-                        enabled = !state.isNetworkLoading
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
                     ) {
-                        if (state.isNetworkLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh"
+                        currencies.forEach { currency ->
+                            DropdownMenuItem(
+                                text = { Text(currency.code) },
+                                onClick = {
+                                    expanded = false
+                                    onBaseCurrencyChange(currency.code)
+                                }
                             )
                         }
                     }
                 }
             }
         }
+    }
+}
 
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+@Composable
+fun AutoRefreshCard(
+    isEnabled: Boolean,
+    refreshInterval: Float,
+    onEnabledChange: (Boolean) -> Unit,
+    onIntervalChange: (Float) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    "Base currency",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Column {
+                    Text(
+                        "Automatic refresh",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    Text(
+                        "Download data in the background",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = { onEnabledChange(it) }
+                )
+            }
+
+            if (isEnabled) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Frequency: every ${refreshInterval.roundToInt()} min")
+
+                Slider(
+                    value = refreshInterval,
+                    onValueChange = { onIntervalChange(it) },
+                    onValueChangeFinished = { onIntervalChange(refreshInterval) },
+                    valueRange = 15f..60f,
+                    steps = 8
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ManualRefreshCard(
+    isLoading: Boolean,
+    onRefreshClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        "Exchange rates will be calculated relative to this currency.",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f)
+                        "Manual refresh",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        "Download data now",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
-                    var expanded by remember { mutableStateOf(false) }
-                    val currencies = CurrencyData.currencies
-
-                    Box {
-                        OutlinedButton(
-                            onClick = {
-                                expanded = true
-                            },
-                        ) {
-                            Text(
-                                baseCurrency
-                            )
-                            Icon(
-                                Icons.Default.ArrowDropDown,
-                                contentDescription = null
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            currencies.forEach { currency ->
-                                DropdownMenuItem(
-                                    text = { Text(currency.code) },
-                                    onClick = {
-                                        baseCurrency = currency.code
-                                        expanded = false
-                                        scope.launch {
-                                            settingsManager.saveBaseCurrency(currency.code)
-                                        }
-                                    }
-                                )
-                            }
-                        }
+                IconButton(
+                    onClick = onRefreshClick,
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh now"
+                        )
                     }
                 }
             }
         }
+    }
+}
 
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+@Composable
+fun ConnectionStatusCard(
+    isNetworkConnected: Boolean,
+    isNetworkLoading: Boolean,
+    onRefreshClick: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(
-                    "Display format",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    "Number of decimal places",
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = decimalPlaces == 2,
-                        onClick = {
-                            decimalPlaces = 2
-                            scope.launch {
-                                settingsManager.saveDecimalPlaces(2)
-                            }
-                        },
-                        label = {
-                            Text("0.00")
-                        }
-                    )
-
-                    FilterChip(
-                        selected = decimalPlaces == 3,
-                        onClick = {
-                            decimalPlaces = 3
-                            scope.launch {
-                                settingsManager.saveDecimalPlaces(3)
-                            }
-                        },
-                        label = {
-                            Text("0.000")
-                        }
-                    )
-
-                    FilterChip(
-                        selected = decimalPlaces == 4,
-                        onClick = {
-                            decimalPlaces = 4
-                            scope.launch {
-                                settingsManager.saveDecimalPlaces(4)
-                            }
-                        },
-                        label = {
-                            Text("0.0000")
-                        }
-                    )
-                }
-            }
-        }
-
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            Text(
+                text = "Connection status",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            "Manual refresh",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            "Download data now",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            viewModel.getRatesForCurrency(baseCurrency, RefreshSource.MANUAL_CARD)
-                        },
-                        enabled = !state.isManualLoading
-                    ) {
-                        if (state.isManualLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isNetworkConnected) Color(0xFF4CAF50) else Color.Red
                             )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh now"
-                            )
-                        }
-                    }
-                }
-            }
-        }
+                    )
 
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = if (isNetworkConnected) "Connected to the network" else "No connection",
+                    )
+                }
+
+                IconButton(
+                    onClick = onRefreshClick,
+                    enabled = !isNetworkLoading
                 ) {
-                    Column {
-                        Text(
-                            "Automatic refresh",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                    if (isNetworkLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
                         )
-
-                        Text(
-                            "Download data in the background",
-                            style = MaterialTheme.typography.bodySmall
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh"
                         )
                     }
-                    Switch(
-                        checked = isAutoRefreshEnabled,
-                        onCheckedChange = { isChecked ->
-                            isAutoRefreshEnabled = isChecked
-                            scope.launch {
-                                settingsManager.saveAutoRefreshStatus(isChecked)
-                            }
-                        }
-                    )
-                }
-
-                if (isAutoRefreshEnabled) {
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text("Frequency: every ${refreshInterval.roundToInt()} min")
-
-                    Slider(
-                        value = refreshInterval,
-                        onValueChange = {
-                            refreshInterval = it
-                        },
-                        onValueChangeFinished = {
-                            scope.launch {
-                                settingsManager.saveRefreshInterval(
-                                    refreshInterval.roundToInt().toFloat()
-                                )
-                            }
-                        },
-                        valueRange = 15f..60f,
-                        steps = 8
-                    )
                 }
             }
         }

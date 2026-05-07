@@ -1,6 +1,8 @@
 package com.example.currencyexchangerateapp.ui.screens
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -21,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,17 +51,30 @@ fun MainScreen(
     val networkMonitor = remember { NetworkMonitor(context) }
     val isOnline by networkMonitor.isConnected.collectAsState(initial = true)
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val screenWidthDp = configuration.screenWidthDp
+    val columns = when {
+        isLandscape && screenWidthDp >= 600 -> 3
+        isLandscape -> 2
+        screenWidthDp >= 600 -> 2
+        else -> 1
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        Text(
-            text = "Watched Currencies",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        if (!isLandscape) {
+            Text(
+                text = "Watched Currencies",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        }
 
         if (!isOnline) {
             Card(
@@ -92,12 +111,15 @@ fun MainScreen(
                 }
                 .toList()
 
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(filteredListToDisplay) { index, (currencyCode, rate) ->
+                items(filteredListToDisplay) { (currencyCode, rate) ->
                     val history = viewModel.getHistoryForCurrency(baseCurrency, currencyCode, 2)
 
                     val previousRate = history.getOrNull(0)?.second ?: rate
@@ -114,10 +136,6 @@ fun MainScreen(
                             navController.navigate("details/$currencyCode")
                         }
                     )
-
-                    if (index < filteredListToDisplay.lastIndex) {
-                        Spacer(modifier = Modifier.padding(vertical = 4.dp))
-                    }
                 }
             }
         } else {

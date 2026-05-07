@@ -1,5 +1,6 @@
 package com.example.currencyexchangerateapp.ui.navigation
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -41,6 +43,11 @@ import com.example.currencyexchangerateapp.ui.screens.DetailsScreen
 import com.example.currencyexchangerateapp.ui.screens.FavouriteScreen
 import com.example.currencyexchangerateapp.ui.screens.MainScreen
 import com.example.currencyexchangerateapp.ui.screens.SettingsScreen
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 
 data class BottomNavigationItem(
     val route: String,
@@ -62,6 +69,9 @@ fun Navigation(
     val mainViewModel: MainViewModel = viewModel(factory = factory)
 
     val navController = rememberNavController()
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val items = listOf(
         BottomNavigationItem(
@@ -107,86 +117,139 @@ fun Navigation(
     ) {
         Scaffold(
             bottomBar = {
-                NavigationBar {
-                    items.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            selected = selectedItemIndex == index,
-                            onClick = {
-                                selectedItemIndex = index
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            label = {
-                                Text(text = item.title)
-                            },
-                            icon = {
-                                BadgedBox(
-                                    badge = {
-                                        if (item.badgeCount != null) {
-                                            Badge {
-                                                Text(text = item.badgeCount.toString())
-                                            }
-                                        } else if (item.hasNews) {
-                                            Badge()
+                if (!isLandscape) {
+                    NavigationBar {
+                        items.forEachIndexed { index, item ->
+                            NavigationBarItem(
+                                selected = selectedItemIndex == index,
+                                onClick = {
+                                    selectedItemIndex = index
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
                                         }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                ) {
-                                    Icon(
-                                        imageVector = if (selectedItemIndex == index) {
-                                            item.selectedIcon
-                                        } else {
-                                            item.unselectedIcon
-                                        },
-                                        contentDescription = item.title
-                                    )
+                                },
+                                label = {
+                                    Text(text = item.title)
+                                },
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (item.badgeCount != null) {
+                                                Badge {
+                                                    Text(text = item.badgeCount.toString())
+                                                }
+                                            } else if (item.hasNews) {
+                                                Badge()
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = if (selectedItemIndex == index) {
+                                                item.selectedIcon
+                                            } else {
+                                                item.unselectedIcon
+                                            },
+                                            contentDescription = item.title
+                                        )
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
         ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = Screen.MainScreen.route,
-                modifier = Modifier.padding(innerPadding)
-            ) {
-                composable(route = Screen.MainScreen.route) {
-                    MainScreen(
-                        navController = navController,
-                        viewModel = mainViewModel,
-                        settingsManager = settingsManager
-                    )
+            Row(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                if (isLandscape) {
+                    NavigationRail {
+                        items.forEachIndexed { index, item ->
+                            NavigationRailItem(
+                                selected = selectedItemIndex == index,
+                                onClick = {
+                                    selectedItemIndex = index
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                label = {
+                                    Text(text = item.title)
+                                },
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (item.badgeCount != null) {
+                                                Badge {
+                                                    Text(text = item.badgeCount.toString())
+                                                }
+                                            } else if (item.hasNews) {
+                                                Badge()
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = if (selectedItemIndex == index) {
+                                                item.selectedIcon
+                                            } else {
+                                                item.unselectedIcon
+                                            },
+                                            contentDescription = item.title
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
-                composable(
-                    route = "details/{currencyCode}",
-                    arguments = listOf(navArgument("currencyCode") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val currencyCode = backStackEntry.arguments?.getString("currencyCode") ?: "USD"
-                    DetailsScreen(
-                        currencyCode = currencyCode,
+
+                Box(modifier = Modifier.weight(1f)) {
+                    NavHost(
                         navController = navController,
-                        viewModel = mainViewModel,
-                        settingsManager = settingsManager
-                    )
-                }
-                composable(route = Screen.FavouriteScreen.route) {
-                    FavouriteScreen(
-                        navController = navController,
-                        viewModel = mainViewModel,
-                        settingsManager = settingsManager
-                    )
-                }
-                composable(route = Screen.SettingsScreen.route) {
-                    SettingsScreen(
-                        viewModel = mainViewModel,
-                        settingsManager = settingsManager
-                    )
+                        startDestination = Screen.MainScreen.route,
+                    ) {
+                        composable(route = Screen.MainScreen.route) {
+                            MainScreen(
+                                navController = navController,
+                                viewModel = mainViewModel,
+                                settingsManager = settingsManager
+                            )
+                        }
+                        composable(
+                            route = "details/{currencyCode}",
+                            arguments = listOf(navArgument("currencyCode") {
+                                type = NavType.StringType
+                            })
+                        ) { backStackEntry ->
+                            val currencyCode =
+                                backStackEntry.arguments?.getString("currencyCode") ?: "USD"
+                            DetailsScreen(
+                                currencyCode = currencyCode,
+                                navController = navController,
+                                viewModel = mainViewModel,
+                                settingsManager = settingsManager
+                            )
+                        }
+                        composable(route = Screen.FavouriteScreen.route) {
+                            FavouriteScreen(
+                                navController = navController,
+                                viewModel = mainViewModel,
+                                settingsManager = settingsManager
+                            )
+                        }
+                        composable(route = Screen.SettingsScreen.route) {
+                            SettingsScreen(
+                                viewModel = mainViewModel,
+                                settingsManager = settingsManager
+                            )
+                        }
+                    }
                 }
             }
         }

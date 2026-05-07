@@ -28,6 +28,7 @@ ycharts = "2.1.0"
 uiText = "1.11.0"
 uiGraphics = "1.11.0"
 ui = "1.11.0"
+foundationLayoutVersion = "1.11.1"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
@@ -66,6 +67,7 @@ ycharts = { module = "co.yml:ycharts", version.ref = "ycharts" }
 androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
+androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayoutVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

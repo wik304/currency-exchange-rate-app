@@ -126,6 +126,4 @@ class SettingsManager(val context: Context) {
         }
         file.writeText(lines.joinToString("\n") + "\n")
     }
-
-
 }

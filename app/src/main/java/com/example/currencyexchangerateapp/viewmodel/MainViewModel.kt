@@ -233,7 +233,7 @@ class MainViewModel(
             } else {
                 allHistory.groupBy { it.first }
                     .mapNotNull { entry ->
-                        val firstElement = entry.value.firstOrNull() ?: return@mapNotNull null
+                        val firstElement = entry.value.lastOrNull() ?: return@mapNotNull null
                         entry.key to firstElement.third
                     }
                     .sortedBy { it.first }
