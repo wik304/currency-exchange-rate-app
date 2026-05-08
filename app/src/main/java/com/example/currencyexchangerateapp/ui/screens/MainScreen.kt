@@ -54,7 +54,7 @@ fun MainScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val screenWidthDp = configuration.screenWidthDp
+    val screenWidthDp = configuration.smallestScreenWidthDp
     val columns = when {
         isLandscape && screenWidthDp >= 600 -> 3
         isLandscape -> 2

@@ -75,7 +75,7 @@ fun DetailsScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scrollState = rememberScrollState()
 
-    val screenWidthDp = configuration.screenWidthDp
+    val screenWidthDp = configuration.smallestScreenWidthDp
     val isTablet = screenWidthDp >= 600
 
     val chartHeight = when {
