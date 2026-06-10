@@ -1,75 +1,76 @@
 # 💱 Currency Exchange Rate App
 
-Nowoczesna aplikacja na system Android do śledzenia aktualnych i historycznych kursów walut. Projekt został napisany w języku **Kotlin** z wykorzystaniem w pełni deklaratywnego interfejsu **Jetpack Compose** oraz nowoczesnej architektury aplikacji mobilnych.
+A modern Android application for tracking current and historical currency exchange rates. The project was written in **Kotlin** using the fully declarative **Jetpack Compose** UI toolkit and modern mobile app architecture.
 
-### 🌟 Główne funkcje
+### 🌟 Key Features
 
-* **Śledzenie walut na żywo:** Przeglądaj aktualne kursy dla wybranej waluty bazowej.
-* **Wykresy historyczne (Vico):** Detaliczny widok każdej waluty z interaktywnym wykresem liniowym prezentującym dane z 1, 7 lub 30 dni.
-* **Tryb Offline:** Aplikacja automatycznie buforuje ostatnio pobrane dane. W przypadku braku połączenia z internetem wyświetla ostrzeżenie i ładuje dane z pamięci podręcznej.
-* **Ulubione waluty:** Możliwość personalizacji ekranu głównego poprzez przypinanie i odpinanie wybranych walut (wsparcie dla flag państw).
-* **Praca w tle (WorkManager):** Opcjonalne, automatyczne odświeżanie kursów w tle z konfigurowalnym interwałem czasowym (np. co 15 minut) lub wymuszone odświeżanie ręczne.
-* **Zaawansowane ustawienia:** Zmiana waluty bazowej, dostosowanie formatu wyświetlania (liczba miejsc po przecinku) oraz zarządzanie częstotliwością odświeżania.
+* **Live Currency Tracking:** View real-time exchange rates for your selected base currency.
+* **Historical Charts (Vico):** Detailed view of each currency with an interactive line chart presenting data from 1, 7, or 30 days.
+* **Offline Mode:** The app automatically caches recently fetched data. If there is no internet connection, it displays a warning and loads data from the local cache.
+* **Favorite Currencies:** Personalize your home screen by pinning and unpinning selected currencies (includes country flag support).
+* **Background Work (WorkManager):** Optional, automatic background rate refreshing with a configurable time interval (e.g., every 15 minutes) or forced manual refresh.
+* **Advanced Settings:** Change the base currency, adjust the display format (number of decimal places), and manage the refresh frequency.
 
 ---
 
-### 🛠 Technologie i Biblioteki
+### 🛠 Technologies and Libraries
 
-Aplikacja wykorzystuje nowoczesny stos technologiczny Androida:
-* **Język:** Kotlin
+The application utilizes a modern Android tech stack:
+* **Language:** Kotlin
 * **UI:** Jetpack Compose, Material Design 3
-* **Architektura:** MVVM (Model-View-ViewModel) z użyciem Kotlin Flow / StateFlow
-* **Sieć:** Retrofit2 + Gson do komunikacji z API
-* **Pamięć lokalna:** * `DataStore Preferences` (ustawienia aplikacji i ulubione)
-  * `EncryptedSharedPreferences` (bezpieczne przechowywanie klucza API i wrażliwych danych)
-* **Zadania w tle:** WorkManager (CoroutineWorker)
-* **Wykresy:** Vico Compose (interaktywne i płynne wykresy)
-* **Multimedia:** Coil (asynchroniczne ładowanie flag państw z sieci)
+* **Architecture:** MVVM (Model-View-ViewModel) using Kotlin Flow / StateFlow
+* **Networking:** Retrofit2 + Gson for API communication
+* **Local Storage:** 
+  * `DataStore Preferences` (app settings and favorites)
+  * `EncryptedSharedPreferences` (secure storage for API key and sensitive data)
+* **Background Tasks:** WorkManager (CoroutineWorker)
+* **Charts:** Vico Compose (interactive and smooth charts)
+* **Media:** Coil (asynchronous network loading of country flags)
 
 ---
 
-### 🔑 Konfiguracja API (Wymagane do uruchomienia)
+### 🔑 API Configuration (Required to Run)
 
-Aplikacja pobiera dane o kursach walut z serwisu **ExchangeRate-API**. Aby projekt działał poprawnie na Twoim urządzeniu, musisz wygenerować własny darmowy klucz API i dodać go do kodu.
+The app fetches exchange rate data from **ExchangeRate-API**. For the project to work correctly on your device, you must generate your own free API key and add it to the code.
 
-**Krok 1: Zdobądź klucz API**
-1. Wejdź na stronę: 👉 [https://app.exchangerate-api.com/keys](https://app.exchangerate-api.com/keys)
-2. Załóż darmowe konto lub zaloguj się.
-3. Skopiuj swój wygenerowany klucz API (ciąg znaków).
+**Step 1: Get an API Key**
+1. Go to: 👉 [https://app.exchangerate-api.com/keys](https://app.exchangerate-api.com/keys)
+2. Create a free account or log in.
+3. Copy your generated API key.
 
-**Krok 2: Dodaj klucz do projektu**
-Otwórz plik `MainActivity.kt` znajdujący się w ścieżce:
+**Step 2: Add the Key to the Project**
+Open the `MainActivity.kt` file located at:
 `app/src/main/java/com/example/currencyexchangerateapp/MainActivity.kt`
 
-Znajdź poniższy fragment kodu w metodzie `onCreate` i podmień `api-key-here` na swój skopiowany klucz (pamiętaj o dodaniu cudzysłowów `"Twój-Klucz"`, jeśli wymaga tego składnia):
+Find the following code snippet in the `onCreate` method and replace `api-key-here` with your copied key (remember to add quotes `"Your-Key"` if the syntax requires it):
 
 ```kotlin
 val currentKey = settingsManager.getApiKey()
 
 if (currentKey.isEmpty()) {
-    // PODMIEŃ PONIŻSZY TEKST NA SWÓJ KLUCZ API
-    settingsManager.saveApiKey("TUTAJ_WKLEJ_SWOJ_KLUCZ")
+    // REPLACE THE TEXT BELOW WITH YOUR API KEY
+    settingsManager.saveApiKey("PASTE_YOUR_KEY_HERE")
 }
 ```
-*Uwaga: Zastosowany `SettingsManager` korzysta z `EncryptedSharedPreferences`, dzięki czemu klucz jest bezpiecznie szyfrowany w pamięci urządzenia.*
+*Note: The utilized `SettingsManager` uses `EncryptedSharedPreferences`, ensuring the key is securely encrypted in the device's storage.*
 
 ---
 
-### 📱 Struktura Ekranów
+### 📱 Screen Structure
 
-Aplikacja składa się z 4 głównych widoków zorganizowanych w architekturze nawigacji dolnej (Bottom Navigation):
+The application consists of 4 main views organized in a Bottom Navigation architecture:
 
-1. **Home (MainScreen):** Siatka obserwowanych (ulubionych) walut. Pokazuje aktualny kurs w stosunku do waluty bazowej oraz procentową zmianę w czasie.
-2. **DetailsScreen:** Szczegółowy ekran wybranej waluty z interaktywnym wykresem historii, aktualnym kursem i informacjami o źródle danych.
-3. **FavouriteScreen:** Lista wszystkich dostępnych walut z przełącznikami (Switch) pozwalającymi łatwo zarządzać ekranem głównym.
-4. **SettingsScreen:** Zarządzanie kluczem, odświeżaniem w tle, formatem liczb, statusem sieci oraz walutą bazową. Wymuszenie aktualizacji danych.
+1. **Home (MainScreen):** A grid of watched (favorite) currencies. Shows the current exchange rate relative to the base currency and the percentage change over time.
+2. **DetailsScreen:** A detailed screen for the selected currency featuring an interactive historical chart, current rate, and data source information.
+3. **FavouriteScreen:** A list of all available currencies with toggle switches to easily manage your home screen.
+4. **SettingsScreen:** Manage the API key, background refresh, number format, network status, and base currency. Allows for forced data updates.
 
 ---
 
-### 🚀 Jak uruchomić projekt lokalnie?
+### 🚀 How to Run the Project Locally
 
-1. Sklonuj to repozytorium na swój komputer.
-2. Otwórz projekt w **Android Studio**.
-3. Zsynchronizuj pliki Gradle (IDE powinno to zrobić automatycznie).
-4. Postępuj zgodnie z instrukcją w sekcji **Konfiguracja API**, aby podać swój klucz.
-5. Wybierz emulator lub fizyczne urządzenie i kliknij **Run** (Shift + F10).
+1. Clone this repository to your computer.
+2. Open the project in **Android Studio**.
+3. Sync the Gradle files (the IDE should do this automatically).
+4. Follow the instructions in the **API Configuration** section to provide your key.
+5. Select an emulator or a physical device and click **Run** (Shift + F10).
