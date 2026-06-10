@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
         val currentKey = settingsManager.getApiKey()
 
         if (currentKey.isEmpty()) {
-            settingsManager.saveApiKey("5a9cf9cbf83844c7b0635d69")
+            settingsManager.saveApiKey(api-key-here)
         }
 
         setupDailyWorker()
