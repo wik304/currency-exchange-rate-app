@@ -13,6 +13,17 @@ A modern Android application for tracking current and historical currency exchan
 
 ---
 
+### Screens
+
+<div align="center">
+  <img src="currency_exchange_app_screens/1.jpg" width="24%" alt="Home page">
+  <img src="currency_exchange_app_screens/2.jpg" width="24%" alt="Details page">
+  <img src="currency_exchange_app_screens/3.jpg" width="24%" alt="Manage currencies page">
+  <img src="currency_exchange_app_screens/4.jpg" width="24%" alt="Settings page">
+</div>
+
+---
+
 ### 🛠 Technologies and Libraries
 
 The application utilizes a modern Android tech stack:
